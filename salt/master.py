@@ -1778,16 +1778,31 @@ class ClearFuncs(object):
             self.opts.get('autoreject_file', None)
         )
 
-    def __check_autosign(self, keyid):
+    def __check_pub_in_autosign(self, keyid, pub_key):
+        """
+        Checks if public key is in the list of keys that should be autosigned
+        """
+        pki_dir = self.opts.get('autosign_pki_dir')
+        if not os.path.isdir(pki_dir):
+            log.warning("Autosign PKI directory {} does not exist".format(pki_dir))
+            return False
+
+        for fl_name in os.listdir(pki_dir):
+            with salt.utils.fopen(os.path.join(pki_dir, fl_name), 'r') as fl:
+                if fl.read() == pub_key:
+                    log.debug("Public key for minion with id "
+                              "'{}', matched in {}".format(keyid, fl_name))
+                    return True
+
+    def __check_autosign(self, keyid, pub_key):
         '''
         Checks if the specified keyid should automatically be signed.
         '''
-        if self.opts['auto_accept']:
+        if self.opts['auto_accept'] \
+                or self.__check_signing_file(keyid,
+                                             self.opts.get('autosign_file', None)) \
+                or self.__check_pub_in_autosign(keyid, pub_key):
             return True
-        return self.__check_signing_file(
-            keyid,
-            self.opts.get('autosign_file', None)
-        )
 
     def _auth(self, load):
         '''
@@ -1815,7 +1830,7 @@ class ClearFuncs(object):
 
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.__check_autoreject(load['id'])
-        auto_sign = self.__check_autosign(load['id'])
+        auto_sign = self.__check_autosign(load['id'], load['pub'])
 
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',

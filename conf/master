@@ -612,3 +612,6 @@
 # List of git repositories to include with the local repo
 #win_gitrepos:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
+
+# If received key from minion matches a public key in 'autosign_pki_dir', the key is auto-accepted.
+#autosign_pki_dir: /etc/salt/autosign_pub_keys/
