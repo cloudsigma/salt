@@ -233,6 +233,7 @@ import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.yamldumper import OrderedDumper
+from salt.utils.immutabletypes import ImmutableList
 from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
@@ -2694,9 +2695,9 @@ def touch(name, atime=None, mtime=None, makedirs=False):
             ret, 'Directory not present to touch file {0}'.format(name)
         )
 
-    ret['result'] = __salt__['file.touch'](name, atime, mtime)
-
     extant = os.path.exists(name)
+
+    ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
         ret['comment'] = 'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
@@ -2704,6 +2705,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         ret['comment'] = 'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
+        ret['changes']['touched'] = name
 
     return ret
 
@@ -2940,8 +2942,10 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
-    require_in = __low__.get('require_in', [])
-    watch_in = __low__.get('watch_in', [])
+    require_in = __low__.get('require_in',
+                             ImmutableList([]))
+    watch_in = __low__.get('watch_in',
+                           ImmutableList([]))
     deps = []
     map(deps.append, require_in + watch_in)
     if not filter(lambda x: 'file' in x, deps):
